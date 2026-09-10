@@ -1,63 +1,18 @@
 import type { WorkflowIR } from "../editor/ir.js"
 
-export interface WorkflowExample {
-  readonly id: string
-  readonly title: string
-  readonly description: string
-  readonly workflow: WorkflowIR
-}
+export interface WorkflowExample { readonly id: string; readonly title: string; readonly description: string; readonly workflow: WorkflowIR }
 
 export const workflowExamples: readonly WorkflowExample[] = [
-  {
-    id: "order-processing",
-    title: "Procesar pedido",
-    description: "Valida un pedido, cobra el pago, prepara el envío y notifica al cliente.",
-    workflow: {
-      version: 1,
-      name: "ProcessOrder",
-      body: {
-        nodes: [
-          { _tag: "Activity", id: "validate-order", name: "ValidateOrder" },
-          { _tag: "Activity", id: "charge-payment", name: "ChargePayment" },
-          { _tag: "Activity", id: "create-shipment", name: "CreateShipment" },
-          { _tag: "Activity", id: "send-confirmation", name: "SendConfirmation" },
-        ],
-      },
-    },
-  },
-  {
-    id: "employee-onboarding",
-    title: "Onboarding de empleado",
-    description: "Crea accesos, asigna equipo, agenda la bienvenida y envía documentación.",
-    workflow: {
-      version: 1,
-      name: "EmployeeOnboarding",
-      body: {
-        nodes: [
-          { _tag: "Activity", id: "create-accounts", name: "CreateAccounts" },
-          { _tag: "Activity", id: "assign-equipment", name: "AssignEquipment" },
-          { _tag: "Activity", id: "schedule-welcome", name: "ScheduleWelcome" },
-          { _tag: "Activity", id: "send-documents", name: "SendDocuments" },
-        ],
-      },
-    },
-  },
-  {
-    id: "support-ticket",
-    title: "Ticket de soporte",
-    description: "Clasifica una incidencia, asigna responsable, investiga y comunica la resolución.",
-    workflow: {
-      version: 1,
-      name: "SupportTicket",
-      body: {
-        nodes: [
-          { _tag: "Activity", id: "classify-ticket", name: "ClassifyTicket" },
-          { _tag: "Activity", id: "assign-owner", name: "AssignOwner" },
-          { _tag: "Activity", id: "investigate", name: "Investigate" },
-          { _tag: "Activity", id: "resolve-ticket", name: "ResolveTicket" },
-          { _tag: "Activity", id: "notify-requester", name: "NotifyRequester" },
-        ],
-      },
-    },
-  },
+  { id: "order-approval", title: "Pedido con aprobación", description: "Decisión por importe, aprobación, pago y confirmación.", workflow: { version: 2, name: "Procesar pedido", inputs: ["orderId", "total", "approver"], body: { nodes: [
+    { _tag: "Activity", id: "get-order", name: "Obtener pedido", description: "Carga los datos del pedido" },
+    { _tag: "Condition", id: "high-value", condition: { _tag: "Binary", operator: ">", left: { _tag: "Reference", path: ["input","total"] }, right: { _tag: "Literal", value: 1000 } }, then: { nodes: [{ _tag: "Approval", id: "manager-approval", name: "Aprobación del responsable", approver: { _tag: "Reference", path: ["input","approver"] }, instructions: "Revisar pedidos superiores a 1.000 €", approved: { nodes: [{ _tag: "Activity", id: "approved-note", name: "Registrar aprobación" }] }, rejected: { nodes: [{ _tag: "Activity", id: "cancel-order", name: "Cancelar pedido" }] } }] }, else: { nodes: [] } },
+    { _tag: "Activity", id: "charge", name: "Cobrar pedido" }, { _tag: "Activity", id: "confirm", name: "Enviar confirmación" },
+  ] } } },
+  { id: "employee-onboarding", title: "Onboarding completo", description: "Tareas paralelas, espera y bienvenida.", workflow: { version: 2, name: "Onboarding de empleado", inputs: ["employeeEmail"], body: { nodes: [
+    { _tag: "Parallel", id: "setup", name: "Preparar incorporación", branches: [{ nodes: [{ _tag: "Activity", id: "accounts", name: "Crear cuentas" }] }, { nodes: [{ _tag: "Activity", id: "equipment", name: "Preparar equipo" }] }] },
+    { _tag: "Wait", id: "wait-start", name: "Esperar al primer día", mode: "event", eventName: "employee.started" }, { _tag: "Activity", id: "welcome", name: "Enviar bienvenida" },
+  ] } } },
+  { id: "batch-support", title: "Procesar tickets", description: "Repite un proceso para una colección de tickets.", workflow: { version: 2, name: "Procesar tickets", inputs: ["tickets"], body: { nodes: [
+    { _tag: "Repeat", id: "each-ticket", name: "Procesar cada ticket", collection: { _tag: "Reference", path: ["input","tickets"] }, itemName: "ticket", body: { nodes: [{ _tag: "Activity", id: "classify", name: "Clasificar ticket" }, { _tag: "Subworkflow", id: "resolve", name: "Resolver incidencia", workflowName: "ResolveSupportTicket" }] } },
+  ] } } },
 ] as const
