@@ -1,75 +1,67 @@
-# workflow-engine-ts
+# Effect Workflow Studio
 
-A small, durable workflow engine for TypeScript built on [Effect](https://effect.website/).
+A bidirectional visual editor for the official Effect workflow primitives.
 
-> Status: early MVP. The in-memory adapter is intended for development and tests. Durable production adapters are planned next.
+The project targets two audiences over the same workflow definition:
 
-## Goals
+- non-technical users design workflows with `@xyflow/react`
+- technical users review and edit the equivalent Effect TypeScript
 
-- Define workflows as ordinary typed Effect programs.
-- Persist every completed step.
-- Resume after a process restart without repeating completed steps.
-- Make retries, timeouts, cancellation, and observability composable.
-- Keep persistence behind an adapter.
+The architecture is:
 
-## Install
-
-```bash
-pnpm add workflow-engine-ts effect
+```text
+@xyflow/react <-> WorkflowIR <-> Effect TypeScript
+                              |
+                              v
+                   effect/unstable/workflow
 ```
 
-## Example
+## MVP
 
-```ts
-import { Effect } from "effect"
-import {
-  MemoryWorkflowStore,
-  Workflow,
-  WorkflowRuntime,
-} from "workflow-engine-ts"
+The current branch provides a deployable Cloudflare Workers application with:
 
-const ProcessOrder = Workflow.define({
-  name: "ProcessOrder",
-  version: 1,
-  run: ({ orderId }: { readonly orderId: string }, workflow) =>
-    Effect.gen(function* () {
-      const payment = yield* workflow.step(
-        { id: "charge-payment" },
-        Effect.succeed({ paymentId: `payment-${orderId}` }),
-      )
-
-      return { paymentId: payment.paymentId }
-    }),
-})
-
-const program = Effect.gen(function* () {
-  const store = yield* MemoryWorkflowStore.make
-  const runtime = WorkflowRuntime.make(store)
-
-  return yield* runtime.run(ProcessOrder, {
-    id: "order-123",
-    input: { orderId: "123" },
-  })
-})
-
-Effect.runPromise(program)
-```
-
-Calling `runtime.run` again with the same workflow ID replays persisted step results and continues at the first unfinished step.
-
-## Delivery semantics
-
-The engine provides at-least-once execution for unfinished steps. A completed step is not run again. External side effects must accept an idempotency key because a process can stop after the external operation succeeds but before its result is persisted.
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the design and roadmap.
+- React + Vite frontend
+- xyflow workflow canvas
+- activity nodes and connections
+- Canvas -> Effect source conversion
+- Effect source -> Canvas conversion for the supported reversible subset
+- stable node identifiers
+- Workers KV persistence for saved workflow/source
+- `/api/health`
+- official `Workflow.make` definitions from `effect/unstable/workflow`
 
 ## Development
 
 ```bash
 pnpm install
+pnpm dev
+```
+
+Validation:
+
+```bash
 pnpm check
 pnpm test
+pnpm build
 ```
+
+## Cloudflare
+
+See [CLOUDFLARE.md](./CLOUDFLARE.md).
+
+After creating the `WORKFLOWS` KV namespace and putting its id in `wrangler.jsonc`:
+
+```bash
+pnpm deploy
+```
+
+## Scope of bidirectional editing
+
+The editor intentionally uses a reversible subset of TypeScript. Generated activities carry stable `@workflow-node` metadata. Unsupported arbitrary TypeScript must not be silently converted or discarded; support for conditions, parallel branches, waits and child workflows will be added as explicit IR constructs.
+
+## Legacy prototype
+
+The repository still contains the original custom durable-workflow prototype while migration to Effect's official workflow runtime is underway. New editor/runtime integration should target `effect/unstable/workflow` rather than extending that legacy runtime.
 
 ## License
 
