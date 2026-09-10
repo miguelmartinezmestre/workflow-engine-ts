@@ -14,10 +14,20 @@ button, select { touch-action: manipulation; }
 .toolbar button:hover, .mobile-tools-sheet button:hover { background: #24324b; }
 .mobile-actions, .mobile-tabs, .mobile-tools-sheet { display: none; }
 .workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr); }
-.canvas-panel { min-width: 0; min-height: 0; background: #f8fafc; }
+.canvas-panel { position: relative; min-width: 0; min-height: 0; background: #f8fafc; }
 .code-panel { display: flex; min-width: 0; min-height: 0; flex-direction: column; border-left: 1px solid #263147; background: #0f172a; }
 .panel-title { padding: 10px 14px; border-bottom: 1px solid #263147; color: #cbd5e1; font-size: 13px; font-weight: 600; }
 .code-panel textarea { flex: 1; width: 100%; resize: none; border: 0; outline: 0; padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); background: #0f172a; color: #e2e8f0; font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; line-height: 1.55; tab-size: 2; }
+.node-inspector { position: absolute; z-index: 30; top: 16px; right: 16px; width: min(320px, calc(100% - 32px)); padding: 16px; border: 1px solid #334155; border-radius: 14px; background: #111827; color: #e5e7eb; box-shadow: 0 18px 50px rgb(15 23 42 / 0.28); }
+.inspector-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.inspector-header > div { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.inspector-header strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eyebrow { color: #94a3b8; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.close-button { width: 36px; height: 36px; border: 0; border-radius: 9px; background: #1e293b; color: #e2e8f0; font-size: 22px; }
+.field { display: grid; gap: 7px; margin-bottom: 14px; color: #cbd5e1; font-size: 12px; font-weight: 600; }
+.field input, .field select { width: 100%; min-height: 44px; border: 1px solid #334155; border-radius: 9px; padding: 9px 11px; background: #172033; color: #f8fafc; }
+.inspector-help { margin: 4px 0 16px; color: #94a3b8; font-size: 12px; line-height: 1.45; }
+.danger-button { width: 100%; min-height: 44px; border: 1px solid #7f1d1d; border-radius: 9px; background: #450a0a; color: #fecaca; font-weight: 700; }
 
 @media (max-width: 760px) {
   .toolbar { min-height: 58px; padding-left: 12px; padding-right: 12px; }
@@ -42,4 +52,6 @@ button, select { touch-action: manipulation; }
   .desktop-minimap { display: none; }
   .react-flow__controls button { width: 42px; height: 42px; }
   .react-flow__node { font-size: 14px; }
+  .node-inspector { top: auto; right: 0; bottom: 0; left: 0; width: 100%; max-height: 62%; overflow-y: auto; border-right: 0; border-bottom: 0; border-left: 0; border-radius: 18px 18px 0 0; padding: 18px 16px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -18px 45px rgb(15 23 42 / 0.28); }
+  .field input, .field select, .danger-button { min-height: 48px; }
 }
