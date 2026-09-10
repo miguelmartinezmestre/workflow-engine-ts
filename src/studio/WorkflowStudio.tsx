@@ -8,6 +8,7 @@ import {
   useEdgesState,
   useNodesState,
   type Connection,
+  type NodeMouseHandler,
 } from "@xyflow/react"
 import { parseEffectWorkflow, printEffectWorkflow, WorkflowIR } from "../editor/index.js"
 import { workflowExamples } from "./examples.js"
@@ -26,16 +27,54 @@ export function WorkflowStudio() {
   const [message, setMessage] = useState("Ready")
   const [mobilePanel, setMobilePanel] = useState<"canvas" | "code">("canvas")
   const [toolsOpen, setToolsOpen] = useState(false)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
   const workflow = useMemo(
     () => graphToIR(workflowName, nodes, edges),
     [workflowName, nodes, edges],
   )
 
+  const selectedNode = useMemo(
+    () => nodes.find((node) => node.id === selectedNodeId),
+    [nodes, selectedNodeId],
+  )
+
   const onConnect = useCallback(
     (connection: Connection) => setEdges((current) => addEdge(connection, current)),
     [setEdges],
   )
+
+  const onNodeClick: NodeMouseHandler<StudioNode> = (_event, node) => {
+    setSelectedNodeId(node.id)
+    setToolsOpen(false)
+  }
+
+  const updateSelectedNode = (activityName: string) => {
+    if (selectedNodeId === null) return
+    setNodes((current) => current.map((node) =>
+      node.id === selectedNodeId
+        ? {
+            ...node,
+            data: {
+              ...node.data,
+              label: activityName,
+              activityName,
+            },
+          }
+        : node,
+    ))
+    setMessage("Paso actualizado")
+  }
+
+  const deleteSelectedNode = () => {
+    if (selectedNodeId === null) return
+    setNodes((current) => current.filter((node) => node.id !== selectedNodeId))
+    setEdges((current) => current.filter(
+      (edge) => edge.source !== selectedNodeId && edge.target !== selectedNodeId,
+    ))
+    setSelectedNodeId(null)
+    setMessage("Paso eliminado")
+  }
 
   const addActivity = () => {
     const id = newId()
@@ -51,6 +90,7 @@ export function WorkflowStudio() {
         },
       },
     ])
+    setSelectedNodeId(id)
     setMobilePanel("canvas")
     setToolsOpen(false)
   }
@@ -64,6 +104,7 @@ export function WorkflowStudio() {
     setEdges(graph.edges)
     setCode(printEffectWorkflow(example.workflow))
     setMessage(`Ejemplo cargado: ${example.title}`)
+    setSelectedNodeId(null)
     setMobilePanel("canvas")
     setToolsOpen(false)
   }
@@ -83,6 +124,7 @@ export function WorkflowStudio() {
       setNodes(graph.nodes)
       setEdges(graph.edges)
       setMessage("Effect → Canvas synchronized")
+      setSelectedNodeId(null)
       setMobilePanel("canvas")
       setToolsOpen(false)
     } catch (error) {
@@ -94,8 +136,9 @@ export function WorkflowStudio() {
     const response = await fetch("/api/workflows", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ workflow, code }),
+      body: JSON.stringify({ workflow, code: printEffectWorkflow(workflow) }),
     })
+    setCode(printEffectWorkflow(workflow))
     setMessage(response.ok ? "Workflow saved" : "Could not save workflow")
     setToolsOpen(false)
   }
@@ -109,64 +152,33 @@ export function WorkflowStudio() {
         </div>
 
         <div className="desktop-tools">
-          <select
-            aria-label="Ejemplos"
-            defaultValue=""
-            onChange={(event) => {
-              if (event.target.value !== "") loadExample(event.target.value)
-            }}
-          >
+          <select aria-label="Ejemplos" defaultValue="" onChange={(event) => {
+            if (event.target.value !== "") loadExample(event.target.value)
+          }}>
             <option value="" disabled>Ejemplos…</option>
             {workflowExamples.map((example) => (
               <option key={example.id} value={example.id}>{example.title}</option>
             ))}
           </select>
-          <input
-            aria-label="Workflow name"
-            value={workflowName}
-            onChange={(event) => setWorkflowName(event.target.value)}
-          />
-          <button type="button" onClick={addActivity}>+ Activity</button>
+          <input aria-label="Workflow name" value={workflowName} onChange={(event) => setWorkflowName(event.target.value)} />
+          <button type="button" onClick={addActivity}>+ Paso</button>
           <button type="button" onClick={syncCanvasToCode}>Canvas → Code</button>
           <button type="button" onClick={syncCodeToCanvas}>Code → Canvas</button>
-          <button type="button" onClick={() => void save()}>Save</button>
+          <button type="button" onClick={() => void save()}>Guardar</button>
         </div>
 
         <div className="mobile-actions">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Añadir actividad"
-            onClick={addActivity}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Abrir herramientas"
-            aria-expanded={toolsOpen}
-            onClick={() => setToolsOpen((open) => !open)}
-          >
-            ⋯
-          </button>
+          <button type="button" className="icon-button" aria-label="Añadir paso" onClick={addActivity}>+</button>
+          <button type="button" className="icon-button" aria-label="Abrir herramientas" aria-expanded={toolsOpen} onClick={() => setToolsOpen((open) => !open)}>⋯</button>
         </div>
       </header>
 
       {toolsOpen && (
         <div className="mobile-tools-sheet">
-          <input
-            aria-label="Workflow name"
-            value={workflowName}
-            onChange={(event) => setWorkflowName(event.target.value)}
-          />
-          <select
-            aria-label="Ejemplos"
-            defaultValue=""
-            onChange={(event) => {
-              if (event.target.value !== "") loadExample(event.target.value)
-            }}
-          >
+          <input aria-label="Workflow name" value={workflowName} onChange={(event) => setWorkflowName(event.target.value)} />
+          <select aria-label="Ejemplos" defaultValue="" onChange={(event) => {
+            if (event.target.value !== "") loadExample(event.target.value)
+          }}>
             <option value="" disabled>Seleccionar ejemplo…</option>
             {workflowExamples.map((example) => (
               <option key={example.id} value={example.id}>{example.title}</option>
@@ -179,20 +191,8 @@ export function WorkflowStudio() {
       )}
 
       <nav className="mobile-tabs" aria-label="Vista del editor">
-        <button
-          type="button"
-          className={mobilePanel === "canvas" ? "active" : ""}
-          onClick={() => setMobilePanel("canvas")}
-        >
-          Canvas
-        </button>
-        <button
-          type="button"
-          className={mobilePanel === "code" ? "active" : ""}
-          onClick={() => setMobilePanel("code")}
-        >
-          Código
-        </button>
+        <button type="button" className={mobilePanel === "canvas" ? "active" : ""} onClick={() => setMobilePanel("canvas")}>Canvas</button>
+        <button type="button" className={mobilePanel === "code" ? "active" : ""} onClick={() => setMobilePanel("code")}>Código</button>
       </nav>
 
       <section className={`workspace mobile-${mobilePanel}`}>
@@ -203,6 +203,8 @@ export function WorkflowStudio() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            onPaneClick={() => setSelectedNodeId(null)}
             fitView
             panOnScroll
             selectionOnDrag={false}
@@ -211,16 +213,43 @@ export function WorkflowStudio() {
             <MiniMap className="desktop-minimap" />
             <Controls />
           </ReactFlow>
+
+          {selectedNode !== undefined && (
+            <aside className="node-inspector" aria-label="Propiedades del paso">
+              <div className="inspector-header">
+                <div>
+                  <span className="eyebrow">Paso seleccionado</span>
+                  <strong>{selectedNode.data.label}</strong>
+                </div>
+                <button type="button" className="close-button" aria-label="Cerrar propiedades" onClick={() => setSelectedNodeId(null)}>×</button>
+              </div>
+
+              <label className="field">
+                <span>Nombre visible</span>
+                <input
+                  value={selectedNode.data.activityName ?? selectedNode.data.label}
+                  onChange={(event) => updateSelectedNode(event.target.value)}
+                  placeholder="Ej. Enviar factura"
+                />
+              </label>
+
+              <label className="field">
+                <span>Tipo</span>
+                <select value="activity" disabled>
+                  <option value="activity">Actividad</option>
+                </select>
+              </label>
+
+              <p className="inspector-help">Este nombre se refleja automáticamente en el workflow Effect al sincronizar o guardar.</p>
+
+              <button type="button" className="danger-button" onClick={deleteSelectedNode}>Eliminar paso</button>
+            </aside>
+          )}
         </div>
 
         <div className="code-panel">
           <div className="panel-title">Effect TypeScript</div>
-          <textarea
-            aria-label="Effect TypeScript source"
-            spellCheck={false}
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-          />
+          <textarea aria-label="Effect TypeScript source" spellCheck={false} value={code} onChange={(event) => setCode(event.target.value)} />
         </div>
       </section>
     </main>
