@@ -24,6 +24,8 @@ export function WorkflowStudio() {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges)
   const [code, setCode] = useState(() => printEffectWorkflow(initialIR))
   const [message, setMessage] = useState("Ready")
+  const [mobilePanel, setMobilePanel] = useState<"canvas" | "code">("canvas")
+  const [toolsOpen, setToolsOpen] = useState(false)
 
   const workflow = useMemo(
     () => graphToIR(workflowName, nodes, edges),
@@ -49,6 +51,8 @@ export function WorkflowStudio() {
         },
       },
     ])
+    setMobilePanel("canvas")
+    setToolsOpen(false)
   }
 
   const loadExample = (exampleId: string) => {
@@ -60,11 +64,15 @@ export function WorkflowStudio() {
     setEdges(graph.edges)
     setCode(printEffectWorkflow(example.workflow))
     setMessage(`Ejemplo cargado: ${example.title}`)
+    setMobilePanel("canvas")
+    setToolsOpen(false)
   }
 
   const syncCanvasToCode = () => {
     setCode(printEffectWorkflow(workflow))
     setMessage("Canvas → Effect synchronized")
+    setMobilePanel("code")
+    setToolsOpen(false)
   }
 
   const syncCodeToCanvas = () => {
@@ -75,6 +83,8 @@ export function WorkflowStudio() {
       setNodes(graph.nodes)
       setEdges(graph.edges)
       setMessage("Effect → Canvas synchronized")
+      setMobilePanel("canvas")
+      setToolsOpen(false)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not parse workflow")
     }
@@ -87,39 +97,105 @@ export function WorkflowStudio() {
       body: JSON.stringify({ workflow, code }),
     })
     setMessage(response.ok ? "Workflow saved" : "Could not save workflow")
+    setToolsOpen(false)
   }
 
   return (
     <main className="studio-shell">
       <header className="toolbar">
-        <div>
+        <div className="brand-block">
           <strong>Effect Workflow Studio</strong>
           <span className="status">{message}</span>
         </div>
-        <select
-          aria-label="Ejemplos"
-          defaultValue=""
-          onChange={(event) => {
-            if (event.target.value !== "") loadExample(event.target.value)
-          }}
-        >
-          <option value="" disabled>Ejemplos…</option>
-          {workflowExamples.map((example) => (
-            <option key={example.id} value={example.id}>{example.title}</option>
-          ))}
-        </select>
-        <input
-          aria-label="Workflow name"
-          value={workflowName}
-          onChange={(event) => setWorkflowName(event.target.value)}
-        />
-        <button type="button" onClick={addActivity}>+ Activity</button>
-        <button type="button" onClick={syncCanvasToCode}>Canvas → Code</button>
-        <button type="button" onClick={syncCodeToCanvas}>Code → Canvas</button>
-        <button type="button" onClick={() => void save()}>Save</button>
+
+        <div className="desktop-tools">
+          <select
+            aria-label="Ejemplos"
+            defaultValue=""
+            onChange={(event) => {
+              if (event.target.value !== "") loadExample(event.target.value)
+            }}
+          >
+            <option value="" disabled>Ejemplos…</option>
+            {workflowExamples.map((example) => (
+              <option key={example.id} value={example.id}>{example.title}</option>
+            ))}
+          </select>
+          <input
+            aria-label="Workflow name"
+            value={workflowName}
+            onChange={(event) => setWorkflowName(event.target.value)}
+          />
+          <button type="button" onClick={addActivity}>+ Activity</button>
+          <button type="button" onClick={syncCanvasToCode}>Canvas → Code</button>
+          <button type="button" onClick={syncCodeToCanvas}>Code → Canvas</button>
+          <button type="button" onClick={() => void save()}>Save</button>
+        </div>
+
+        <div className="mobile-actions">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Añadir actividad"
+            onClick={addActivity}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Abrir herramientas"
+            aria-expanded={toolsOpen}
+            onClick={() => setToolsOpen((open) => !open)}
+          >
+            ⋯
+          </button>
+        </div>
       </header>
 
-      <section className="workspace">
+      {toolsOpen && (
+        <div className="mobile-tools-sheet">
+          <input
+            aria-label="Workflow name"
+            value={workflowName}
+            onChange={(event) => setWorkflowName(event.target.value)}
+          />
+          <select
+            aria-label="Ejemplos"
+            defaultValue=""
+            onChange={(event) => {
+              if (event.target.value !== "") loadExample(event.target.value)
+            }}
+          >
+            <option value="" disabled>Seleccionar ejemplo…</option>
+            {workflowExamples.map((example) => (
+              <option key={example.id} value={example.id}>{example.title}</option>
+            ))}
+          </select>
+          <button type="button" onClick={syncCanvasToCode}>Sincronizar Canvas → Código</button>
+          <button type="button" onClick={syncCodeToCanvas}>Sincronizar Código → Canvas</button>
+          <button type="button" onClick={() => void save()}>Guardar workflow</button>
+        </div>
+      )}
+
+      <nav className="mobile-tabs" aria-label="Vista del editor">
+        <button
+          type="button"
+          className={mobilePanel === "canvas" ? "active" : ""}
+          onClick={() => setMobilePanel("canvas")}
+        >
+          Canvas
+        </button>
+        <button
+          type="button"
+          className={mobilePanel === "code" ? "active" : ""}
+          onClick={() => setMobilePanel("code")}
+        >
+          Código
+        </button>
+      </nav>
+
+      <section className={`workspace mobile-${mobilePanel}`}>
         <div className="canvas-panel">
           <ReactFlow
             nodes={nodes}
@@ -128,9 +204,11 @@ export function WorkflowStudio() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             fitView
+            panOnScroll
+            selectionOnDrag={false}
           >
             <Background />
-            <MiniMap />
+            <MiniMap className="desktop-minimap" />
             <Controls />
           </ReactFlow>
         </div>
