@@ -45,5 +45,11 @@
     "vitest": "^4.0.0",
     "wrangler": "^4.0.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
+  },
   "packageManager": "pnpm@11.19.0"
 }
