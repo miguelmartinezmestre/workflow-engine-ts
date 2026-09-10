@@ -10,6 +10,7 @@ import {
   type Connection,
 } from "@xyflow/react"
 import { parseEffectWorkflow, printEffectWorkflow, WorkflowIR } from "../editor/index.js"
+import { workflowExamples } from "./examples.js"
 import { graphToIR, irToGraph, type StudioNode } from "./model.js"
 
 const initialIR = WorkflowIR.empty("ExampleWorkflow")
@@ -50,6 +51,17 @@ export function WorkflowStudio() {
     ])
   }
 
+  const loadExample = (exampleId: string) => {
+    const example = workflowExamples.find((candidate) => candidate.id === exampleId)
+    if (example === undefined) return
+    const graph = irToGraph(example.workflow)
+    setWorkflowName(example.workflow.name)
+    setNodes(graph.nodes)
+    setEdges(graph.edges)
+    setCode(printEffectWorkflow(example.workflow))
+    setMessage(`Ejemplo cargado: ${example.title}`)
+  }
+
   const syncCanvasToCode = () => {
     setCode(printEffectWorkflow(workflow))
     setMessage("Canvas → Effect synchronized")
@@ -84,6 +96,18 @@ export function WorkflowStudio() {
           <strong>Effect Workflow Studio</strong>
           <span className="status">{message}</span>
         </div>
+        <select
+          aria-label="Ejemplos"
+          defaultValue=""
+          onChange={(event) => {
+            if (event.target.value !== "") loadExample(event.target.value)
+          }}
+        >
+          <option value="" disabled>Ejemplos…</option>
+          {workflowExamples.map((example) => (
+            <option key={example.id} value={example.id}>{example.title}</option>
+          ))}
+        </select>
         <input
           aria-label="Workflow name"
           value={workflowName}
