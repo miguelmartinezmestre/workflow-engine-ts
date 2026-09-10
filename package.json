@@ -1,0 +1,38 @@
+{
+  "name": "workflow-engine-ts",
+  "version": "0.0.1",
+  "description": "A small durable workflow engine for TypeScript built on Effect",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "effect",
+    "typescript",
+    "workflow",
+    "durable-execution"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "effect": "^4.0.0-rc.113"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "effect": "^4.0.0-rc.113",
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0"
+  },
+  "packageManager": "pnpm@11.19.0"
+}
