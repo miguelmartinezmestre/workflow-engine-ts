@@ -1,11 +1,13 @@
 import type { Edge, Node } from "@xyflow/react"
-import type { WorkflowIR, WorkflowNode } from "../editor/ir.js"
+import type { Expression, WorkflowIR, WorkflowNode } from "../editor/ir.js"
 
 export interface StudioNodeData extends Record<string, unknown> {
   readonly label: string
   readonly kind: "activity" | "condition"
   readonly activityName?: string
-  readonly expression?: string
+  readonly conditionField?: string
+  readonly conditionOperator?: "===" | "!==" | ">" | ">=" | "<" | "<="
+  readonly conditionValue?: string
 }
 
 export type StudioNode = Node<StudioNodeData>
@@ -15,27 +17,33 @@ export interface StudioGraph {
   readonly edges: Edge[]
 }
 
-const nodeLabel = (node: WorkflowNode): string =>
-  node._tag === "Activity" ? node.name : "Condition"
+const conditionText = (node: Extract<WorkflowNode, { readonly _tag: "Condition" }>): string => {
+  if (node.condition._tag !== "Binary") return "Condición"
+  const left = node.condition.left._tag === "Reference" ? node.condition.left.path.join(".") : "valor"
+  const right = node.condition.right._tag === "Literal" ? String(node.condition.right.value) : "valor"
+  return `${left} ${node.condition.operator} ${right}`
+}
 
 export const irToGraph = (workflow: WorkflowIR): StudioGraph => {
   const nodes: StudioNode[] = workflow.body.nodes.map((node, index) => {
     const data: StudioNodeData = node._tag === "Activity"
-      ? {
-          label: nodeLabel(node),
-          kind: "activity",
-          activityName: node.name,
-        }
+      ? { label: node.name, kind: "activity", activityName: node.name }
       : {
-          label: nodeLabel(node),
+          label: conditionText(node),
           kind: "condition",
-          expression: "condition",
+          ...(node.condition._tag === "Binary" && node.condition.left._tag === "Reference"
+            ? { conditionField: node.condition.left.path.join(".") }
+            : {}),
+          ...(node.condition._tag === "Binary" ? { conditionOperator: node.condition.operator } : {}),
+          ...(node.condition._tag === "Binary" && node.condition.right._tag === "Literal"
+            ? { conditionValue: String(node.condition.right.value) }
+            : {}),
         }
 
     return {
       id: node.id,
       type: "default",
-      position: { x: 120 + index * 230, y: 180 },
+      position: { x: 160 + index * 240, y: 180 },
       data,
     }
   })
@@ -47,6 +55,45 @@ export const irToGraph = (workflow: WorkflowIR): StudioGraph => {
   }))
 
   return { nodes, edges }
+}
+
+const literalFromInput = (value: string): string | number | boolean | null => {
+  const trimmed = value.trim()
+  if (trimmed === "true") return true
+  if (trimmed === "false") return false
+  if (trimmed === "null") return null
+  if (trimmed !== "" && Number.isFinite(Number(trimmed))) return Number(trimmed)
+  return value
+}
+
+const nodeToIR = (node: StudioNode): WorkflowNode => {
+  if (node.data.kind === "condition") {
+    const expression: Expression = {
+      _tag: "Binary",
+      operator: node.data.conditionOperator ?? "===",
+      left: {
+        _tag: "Reference",
+        path: (node.data.conditionField ?? "input.value").split(".").filter(Boolean),
+      },
+      right: {
+        _tag: "Literal",
+        value: literalFromInput(node.data.conditionValue ?? ""),
+      },
+    }
+
+    return {
+      _tag: "Condition",
+      id: node.id,
+      condition: expression,
+      then: { nodes: [] },
+    }
+  }
+
+  return {
+    _tag: "Activity",
+    id: node.id,
+    name: node.data.activityName ?? node.data.label,
+  }
 }
 
 export const graphToIR = (
@@ -90,12 +137,6 @@ export const graphToIR = (
   return {
     version: 1,
     name,
-    body: {
-      nodes: ordered.map((node): WorkflowNode => ({
-        _tag: "Activity",
-        id: node.id,
-        name: node.data.activityName ?? node.data.label,
-      })),
-    },
+    body: { nodes: ordered.map(nodeToIR) },
   }
 }
