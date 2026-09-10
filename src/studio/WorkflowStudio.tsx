@@ -19,6 +19,7 @@ const initialGraph = irToGraph(initialIR)
 const newId = (): string => crypto.randomUUID()
 
 type PrimitiveKind = "activity" | "condition"
+type ConditionOperator = NonNullable<StudioNodeData["conditionOperator"]>
 
 const primitiveCatalog: ReadonlyArray<{
   readonly kind: PrimitiveKind
@@ -266,7 +267,7 @@ export function WorkflowStudio() {
                 <>
                   <div className="condition-builder-title">Continuar cuando…</div>
                   <label className="field"><span>Dato</span><input value={selectedNode.data.conditionField ?? ""} onChange={(event) => updateNodeData({ conditionField: event.target.value })} placeholder="input.total" /></label>
-                  <label className="field"><span>Comparación</span><select value={selectedNode.data.conditionOperator ?? "==="} onChange={(event) => updateNodeData({ conditionOperator: event.target.value as StudioNodeData["conditionOperator"] })}><option value="===">es igual a</option><option value="!==">no es igual a</option><option value=">">es mayor que</option><option value=">=">es mayor o igual que</option><option value="<">es menor que</option><option value="<=">es menor o igual que</option></select></label>
+                  <label className="field"><span>Comparación</span><select value={selectedNode.data.conditionOperator ?? "==="} onChange={(event) => updateNodeData({ conditionOperator: event.target.value as ConditionOperator })}><option value="===">es igual a</option><option value="!==">no es igual a</option><option value=">">es mayor que</option><option value=">=">es mayor o igual que</option><option value="<">es menor que</option><option value="<=">es menor o igual que</option></select></label>
                   <label className="field"><span>Valor</span><input value={selectedNode.data.conditionValue ?? ""} onChange={(event) => updateNodeData({ conditionValue: event.target.value })} placeholder="1000" /></label>
                   <div className="condition-preview">Si <strong>{selectedNode.data.conditionField ?? "el dato"}</strong> {selectedNode.data.conditionOperator ?? "==="} <strong>{selectedNode.data.conditionValue ?? "valor"}</strong></div>
                 </>
