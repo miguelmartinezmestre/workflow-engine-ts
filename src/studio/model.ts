@@ -11,25 +11,34 @@ export interface StudioNodeData extends Record<string, unknown> {
 export type StudioNode = Node<StudioNodeData>
 
 export interface StudioGraph {
-  readonly nodes: readonly StudioNode[]
-  readonly edges: readonly Edge[]
+  readonly nodes: StudioNode[]
+  readonly edges: Edge[]
 }
 
 const nodeLabel = (node: WorkflowNode): string =>
   node._tag === "Activity" ? node.name : "Condition"
 
 export const irToGraph = (workflow: WorkflowIR): StudioGraph => {
-  const nodes: StudioNode[] = workflow.body.nodes.map((node, index) => ({
-    id: node.id,
-    type: "default",
-    position: { x: 120 + index * 230, y: 180 },
-    data: {
-      label: nodeLabel(node),
-      kind: node._tag === "Activity" ? "activity" : "condition",
-      activityName: node._tag === "Activity" ? node.name : undefined,
-      expression: node._tag === "Condition" ? "condition" : undefined,
-    },
-  }))
+  const nodes: StudioNode[] = workflow.body.nodes.map((node, index) => {
+    const data: StudioNodeData = node._tag === "Activity"
+      ? {
+          label: nodeLabel(node),
+          kind: "activity",
+          activityName: node.name,
+        }
+      : {
+          label: nodeLabel(node),
+          kind: "condition",
+          expression: "condition",
+        }
+
+    return {
+      id: node.id,
+      type: "default",
+      position: { x: 120 + index * 230, y: 180 },
+      data,
+    }
+  })
 
   const edges: Edge[] = nodes.slice(1).map((node, index) => ({
     id: `${nodes[index]?.id ?? "start"}->${node.id}`,
