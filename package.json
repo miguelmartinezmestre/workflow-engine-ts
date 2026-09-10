@@ -1,7 +1,7 @@
 {
   "name": "workflow-engine-ts",
   "version": "0.0.1",
-  "description": "A small durable workflow engine for TypeScript built on Effect",
+  "description": "Bidirectional visual editor for Effect workflows",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -16,23 +16,29 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy",
+    "cf:types": "wrangler types"
   },
   "keywords": [
     "effect",
     "typescript",
     "workflow",
-    "durable-execution"
+    "react-flow",
+    "cloudflare-workers"
   ],
   "license": "MIT",
   "peerDependencies": {
     "effect": "^4.0.0-rc.113"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260910.0",
     "@types/node": "^26.0.0",
     "effect": "^4.0.0-rc.113",
     "typescript": "^6.0.0",
-    "vitest": "^4.0.0"
+    "vitest": "^4.0.0",
+    "wrangler": "^4.0.0"
   },
   "packageManager": "pnpm@11.19.0"
 }
